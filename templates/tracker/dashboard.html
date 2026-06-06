@@ -15,6 +15,20 @@
         </a>
     </div>
 
+    <div class="card shadow my-4">
+        <div class="card-body text-center">
+            <h1 id="timer-display" class="display-3 mb-3">00:00:00</h1>
+
+            <h3 id="current-subject">
+                No active sessions
+            </h3>
+
+            <div class="mt-4 d-flex justify-content-center gap-3">
+                <button class="btn btn-warning btn-lg stop-btn" style="display: none">Stop session</button>
+            </div>
+        </div>
+    </div>
+
     <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5">
         {% for subject in subjects %}
             <div class="col mb-3">
@@ -23,6 +37,16 @@
                         <h3 class="mb-3">
                             {{ subject.name }}
                         </h3>
+                        <div class="mt-2">
+                            <button
+                                class="btn btn-info start-btn w-100 mb-2"
+                                data-subject-id="{{ subject.id }}"
+                                data-subject-name="{{ subject.name }}"
+                            >Start session</button>
+                            <a href="{% url 'subject_detail' subject.id %}" class="btn btn-outline-primary w-100">
+                                Details
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -34,4 +58,61 @@
             </div>
         {% endfor %}
     </div>
+
+<script>
+    let timerInterval = null;
+    let startTimestamp = null;
+
+    const timerDisplay = document.querySelector("#timer-display");
+    const currentSubject = document.querySelector("#current-subject");
+    const stopBtn = document.querySelector(".stop-btn");
+
+    function formatTime(seconds) {
+        let hours = Math.floor(seconds / 3600);
+        let minutes = Math.floor(
+            (seconds % 3600) / 60
+        );
+        let secs = seconds % 60;
+
+        hours = String(hours).padStart(2, "0");
+        minutes = String(minutes).padStart(2, "0");
+        secs = String(secs).padStart(2, "0");
+        return `${hours}:${minutes}:${secs}`; /* hours + ":" + minutes + ":" + secs */
+    }
+
+    function startLiveTimer() {
+        timerInterval = setInterval( () => {
+            const now = Date.now() / 1000;
+            const seconds = Math.floor(now - startTimestamp);
+            timerDisplay.innerText = formatTime(seconds);
+        }, 1000)
+    }
+
+    document.querySelectorAll(".start-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const subjectId = btn.dataset.subjectId;
+            const subjectName = btn.dataset.subjectName;
+            const response = await fetch(
+                "/sessions/start/" + subjectId + "/",
+                {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": '{{ csrf_token }}'
+                    }
+                }
+            )
+            const data = await response.json();
+            if (data.success) {
+                startTimestamp = data.start_time;
+                currentSubject.innerText = subjectName;
+                stopBtn.style.display = "inline-block";
+                clearInterval(timerInterval);
+
+                startLiveTimer()
+            } else {
+                alert(data.message)
+            }
+        })
+    })
+</script>
 {% endblock %}

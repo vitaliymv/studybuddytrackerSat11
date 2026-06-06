@@ -1,6 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, TemplateView, DetailView, DeleteView
 from django.utils import timezone
 from .forms import RegistrationForm
@@ -79,3 +82,50 @@ class DeleteSubjectView(LoginRequiredMixin, DeleteView):
     def get_queryset(self):
         return Subject.objects.filter(user=self.request.user)
 
+class StartSessionView(LoginRequiredMixin, View):
+    def post(self, request, subject_id):
+        subject = get_object_or_404(Subject, id=subject_id, user=request.user)
+
+        StudySession.objects.filter(
+            user=request.user,
+            end_time__isnull=True
+        ).update(
+            end_time=timezone.now()
+        )
+
+        session = StudySession.objects.create(
+            user=request.user,
+            subject=subject,
+            start_time=timezone.now()
+        )
+
+        return JsonResponse({
+            "success": True,
+            "session_id": session.id,
+            "start_time": session.start_time.timestamp(),
+            "subject": subject.name
+        })
+
+class StopSessionView(LoginRequiredMixin, View):
+    def post(self, request):
+        session = StudySession.objects.filter(
+            user=request.user,
+            end_time__isnull=True
+        ).first()
+
+        if not session:
+            return JsonResponse({
+                "success": False,
+                "message": "No active session"
+            })
+
+        session.end_time = timezone.now()
+        duration = (session.end_time - session.start_time).total_seconds()
+        session.duration = int(duration)
+        session.save()
+
+        return JsonResponse({
+            "success": True,
+            "duration": session.duration,
+            "message": "Session stoped"
+        })
