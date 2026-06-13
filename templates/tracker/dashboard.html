@@ -1,5 +1,5 @@
 {% extends 'tracker/base.html' %}
-
+{% load core_tags %}
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -7,7 +7,7 @@
 
             <h3>🔥 Streak: {{ streak.current_streak }}</h3>
 
-            <h5>Today: {{ total_today }}</h5>
+            <h5>Today: {{ total_today|time_format }}</h5>
         </div>
 
         <a href="{% url 'add_subject' %}" class="btn btn-success">
@@ -89,7 +89,10 @@
     }
 
     document.querySelectorAll(".start-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", async function() {
+            for (b of document.querySelectorAll(".start-btn")) {
+                b.disabled = false;
+            }
             const subjectId = btn.dataset.subjectId;
             const subjectName = btn.dataset.subjectName;
             const response = await fetch(
@@ -107,12 +110,28 @@
                 currentSubject.innerText = subjectName;
                 stopBtn.style.display = "inline-block";
                 clearInterval(timerInterval);
-
+                this.disabled = true;
                 startLiveTimer()
             } else {
                 alert(data.message)
             }
         })
+    })
+    stopBtn.addEventListener("click", async () => {
+        const response = await fetch("/sessions/stop/", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": '{{ csrf_token }}'
+            }
+        })
+        const data = await response.json();
+        if (data.success) {
+            clearInterval(timerInterval);
+            timerDisplay.innerText = "00:00:00";
+            currentSubject.innerText = "No active session";
+            stopBtn.style.display = "none";
+            location.reload();
+        }
     })
 </script>
 {% endblock %}

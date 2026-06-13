@@ -1,5 +1,5 @@
 {% extends 'tracker/base.html' %}
-
+{% load core_tags %}
 {% block content %}
     <div class="d-flex justify-content-between align-items-center">
         <h1>{{ subject.name }}</h1>
@@ -11,4 +11,24 @@
             </button>
         </form>
     </div>
+    <hr>
+    <h3>Total time: {{ total_time|time_format }}</h3>
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Start</th>
+                <th>End</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+                <tr>
+                    <td>{{ s.start_time }}</td>
+                    <td>{{ s.end_time }}</td>
+                    <td class="{{ s.duration|set_color }}">{{ s.duration|time_format }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}

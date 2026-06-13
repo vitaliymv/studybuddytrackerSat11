@@ -86,13 +86,17 @@ class StartSessionView(LoginRequiredMixin, View):
     def post(self, request, subject_id):
         subject = get_object_or_404(Subject, id=subject_id, user=request.user)
 
-        StudySession.objects.filter(
+        s = StudySession.objects.filter(
             user=request.user,
             end_time__isnull=True
-        ).update(
-            end_time=timezone.now()
         )
 
+        if s:
+            s = s.first()
+            s.end_time = timezone.now()
+            duration = (s.end_time - s.start_time).total_seconds()
+            s.duration = int(duration)
+            s.save()
         session = StudySession.objects.create(
             user=request.user,
             subject=subject,
