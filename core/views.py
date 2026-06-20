@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.db.models import Sum, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
@@ -32,16 +33,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         streak, _ = Streak.objects.get_or_create(
             user=self.request.user
         )
+        s = subjects.annotate(total_seconds=Sum(
+            "studysession__duration",
+            filter=Q(studysession__start_time__date=today)
+        ))
 
         context["subjects"] = subjects
         context["sessions"] = sessions
         context["total_today"] = total_today
         context["streak"] = streak
         context["chart_labels"] = json.dumps([
-            s.subject.name for s in sessions
+            sub.name for sub in s
         ])
         context["chart_data"] = json.dumps([
-            s.duration for s in sessions
+            sub.total_seconds for sub in s
         ])
         return context
 
@@ -110,6 +115,7 @@ class StartSessionView(LoginRequiredMixin, View):
             "subject": subject.name
         })
 
+from .utils import update_streak
 class StopSessionView(LoginRequiredMixin, View):
     def post(self, request):
         session = StudySession.objects.filter(
@@ -127,7 +133,7 @@ class StopSessionView(LoginRequiredMixin, View):
         duration = (session.end_time - session.start_time).total_seconds()
         session.duration = int(duration)
         session.save()
-
+        update_streak(request.user)
         return JsonResponse({
             "success": True,
             "duration": session.duration,

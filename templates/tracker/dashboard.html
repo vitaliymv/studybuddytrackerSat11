@@ -59,6 +59,15 @@
         {% endfor %}
     </div>
 
+    <div class="card shadow mt-4">
+        <div class="card-body">
+            <h3 class="mb-3">
+                Statistics
+            </h3>
+            <canvas id="study-chart"></canvas>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let timerInterval = null;
     let startTimestamp = null;
@@ -66,6 +75,18 @@
     const timerDisplay = document.querySelector("#timer-display");
     const currentSubject = document.querySelector("#current-subject");
     const stopBtn = document.querySelector(".stop-btn");
+
+    const ctx = document.querySelector("#study-chart");
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Study time(sec)',
+                data: {{ chart_data|safe }}
+            }]
+        }
+    })
 
     function formatTime(seconds) {
         let hours = Math.floor(seconds / 3600);
